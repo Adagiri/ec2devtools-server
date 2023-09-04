@@ -1,0 +1,27 @@
+scalar Date
+scalar Time
+scalar DateTime
+scalar DefaultDate
+scalar Any
+scalar Number
+scalar AnyObject
+scalar Odd
+
+type Query {
+  _: Int
+}
+
+type Mutation {
+  _: Int
+}
+
+type DefaultResponse {
+  code: String!
+  success: Boolean!
+  token: String
+}
+
+
+type ListMetadata {
+  count: Int!
+}

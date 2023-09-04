@@ -1,0 +1,43 @@
+extend type Query {
+  admin: Admin!
+  "React admin"
+  Admin(id: ID!): Admin!
+  "React admin"
+  allAdmins(
+    page: Int
+    perPage: Int
+    sortField: String
+    sortOrder: String
+    filter: AdminFilter
+  ): [Admin!]!
+  "React admin"
+  _allAdminsMeta(
+    page: Int
+    perPage: Int
+    sortField: String
+    sortOrder: String
+    filter: AdminFilter
+  ): ListMetadata
+}
+
+extend type Mutation {
+  admin_signup(username: String!, password: String!, email: String!): DefaultResponse!
+  admin_login(githubId: String!): DefaultResponse!
+}
+
+type Admin {
+  _id: ID!
+  adminname: String!
+  photo: String
+}
+
+type AdminResponse {
+  code: String!
+  success: Boolean!
+  data: Admin
+  token: String
+}
+
+input AdminFilter {
+  adminname: String
+}

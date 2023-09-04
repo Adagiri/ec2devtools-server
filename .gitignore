@@ -1,0 +1,8 @@
+# node_modules
+node_modules
+
+# .evn files
+.env 
+*/.env 
+config/config.env
+.vercel

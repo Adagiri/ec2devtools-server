@@ -1,0 +1,43 @@
+extend type Query {
+  user: User!
+  "React admin"
+  User(id: ID!): User!
+  "React admin"
+  allUsers(
+    page: Int
+    perPage: Int
+    sortField: String
+    sortOrder: String
+    filter: UserFilter
+  ): [User!]!
+  "React admin"
+  _allUsersMeta(
+    page: Int
+    perPage: Int
+    sortField: String
+    sortOrder: String
+    filter: UserFilter
+  ): ListMetadata
+}
+
+extend type Mutation {
+  signup(githubId: String!, username: String!, photoURL: String, email: String): DefaultResponse!
+  login(githubId: String!): DefaultResponse!
+}
+
+type User {
+  _id: ID!
+  username: String!
+  photo: String
+}
+
+type UserResponse {
+  code: String!
+  success: Boolean!
+  data: User
+  token: String
+}
+
+input UserFilter {
+  username: String
+}
