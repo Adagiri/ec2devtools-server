@@ -21,14 +21,21 @@ extend type Query {
 }
 
 extend type Mutation {
-  signup(githubId: String!, username: String!, photoURL: String, email: String): DefaultResponse!
-  login(githubId: String!): DefaultResponse!
+  signup(
+    githubId: String!
+    username: String!
+    photoURL: String
+    email: String
+  ): UserResponse!
+  login(githubId: String!): UserResponse!
 }
 
 type User {
   _id: ID!
   username: String!
-  photo: String
+  email: String
+  photoURL: String
+  hasCompletedOnboarding: Boolean!
 }
 
 type UserResponse {

@@ -40,6 +40,7 @@ module.exports.signup = asyncHandler(async (_, args, context) => {
     httpOnly: true,
     secure: true,
     path: '/',
+    sameSite: 'None',
   };
 
   if (existingUser) {
@@ -57,11 +58,14 @@ module.exports.signup = asyncHandler(async (_, args, context) => {
 module.exports.login = asyncHandler(async (_, args, context) => {
   const existingUser = await User.findOne({ githubId: args.githubId });
 
+  // Update user data with fresh records
+  args.email && (existingUser.email = args.email);
+  args.email && (existingUser.username = args.username);
+  args.email && (existingUser.photoURL = args.photoURL);
+  await existingUser.save();
+
   if (!existingUser) {
-    return new ErrorResponse(
-      400,
-      'Unregistered account. Please sign up'
-    );
+    return new ErrorResponse(400, 'Unregistered account. Please sign up');
   } else {
     const options = {
       expires: new Date(Date.now() + process.env.JWT_COOKIE_EXPIRY * 1000),

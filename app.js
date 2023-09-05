@@ -5,12 +5,11 @@ const cookieParser = require('cookie-parser');
 
 const app = express();
 
-let allowedOrigins = ['https://app.propatize.com'];
+let allowedOrigins = ['https://ec2devtools.com'];
 if (process.env.TEST_ENV === 'true') {
   allowedOrigins.push(
     'http://localhost:3000',
     'https://studio.apollographql.com',
-    'https://ab12-102-89-32-34.ngrok-free.app'
   );
 }
 
