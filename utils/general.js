@@ -56,7 +56,8 @@ module.exports.getSignedJwtToken = function (user) {
     },
     process.env.JWT_SECRET_KEY,
     {
-      expiresIn: process.env.JWT_COOKIE_EXPIRY,
+      expiresIn:
+        String(process.env.JWT_COOKIE_EXPIRY_IN_SECS / (60 * 60)) + 'h',
     }
   );
 };

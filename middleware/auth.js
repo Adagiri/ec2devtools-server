@@ -8,18 +8,21 @@ async function getUserInfo(token) {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
+    console.log(payload, 'payload');
     if (payload) {
       return payload;
     }
     return null;
-  } catch (error) {}
+  } catch (error) {
+    console.log(error, 'error whilst verifying jwttoken');
+  }
 }
 
 async function protectUser(_, __, context) {
   const user = await User.findById(context.user?.id).select('username photo');
 
   if (!user) {
-    return new ErrorResponse(401, 'Access Denied: Please Log In to Continue');
+    return new ErrorResponse(401, 'Please login to continue');
   }
 
   context.user = user;

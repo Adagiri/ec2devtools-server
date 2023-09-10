@@ -36,7 +36,9 @@ module.exports.signup = asyncHandler(async (_, args, context) => {
   const existingUser = await User.findOne({ githubId: args.githubId });
 
   const options = {
-    expires: new Date(Date.now() + process.env.JWT_COOKIE_EXPIRY * 1000),
+    expires: new Date(
+      Date.now() + process.env.JWT_COOKIE_EXPIRY_IN_SECS * 1000
+    ),
     httpOnly: true,
     secure: true,
     path: '/',
@@ -58,22 +60,25 @@ module.exports.signup = asyncHandler(async (_, args, context) => {
 module.exports.login = asyncHandler(async (_, args, context) => {
   const existingUser = await User.findOne({ githubId: args.githubId });
 
-  // Update user data with fresh records
-  args.email && (existingUser.email = args.email);
-  args.email && (existingUser.username = args.username);
-  args.email && (existingUser.photoURL = args.photoURL);
-  await existingUser.save();
-
   if (!existingUser) {
     return new ErrorResponse(400, 'Unregistered account. Please sign up');
   } else {
+    // Update user data with fresh records
+    args.email && (existingUser.email = args.email);
+    args.email && (existingUser.username = args.username);
+    args.email && (existingUser.photoURL = args.photoURL);
+    await existingUser.save();
+
     const options = {
-      expires: new Date(Date.now() + process.env.JWT_COOKIE_EXPIRY * 1000),
+      expires: new Date(
+        Date.now() + process.env.JWT_COOKIE_EXPIRY_IN_SECS * 1000
+      ),
       httpOnly: true,
       secure: true,
       path: '/',
     };
 
+    console.log(options, 'options');
     const token = getSignedJwtToken(existingUser);
     context.res.cookie('token', token, options);
     return new SuccessResponse(200, true, existingUser);

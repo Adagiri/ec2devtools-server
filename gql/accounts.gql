@@ -1,0 +1,51 @@
+extend type Query {
+  account: Account!
+  accounts: [Account!]!
+  "React admin"
+  Account(id: ID!): Account!
+  "React admin"
+  allAccounts(
+    page: Int
+    perPage: Int
+    sortField: String
+    sortOrder: String
+    filter: AccountFilter
+  ): [Account!]!
+  "React admin"
+  _allAccountsMeta(
+    page: Int
+    perPage: Int
+    sortField: String
+    sortOrder: String
+    filter: AccountFilter
+  ): ListMetadata
+}
+
+extend type Mutation {
+  account_add(title: String!, roleArn: String!): AccountResponse!
+  account_edit(
+    title: String!
+    accountId: ID!
+    roleArn: String!
+  ): AccountResponse!
+  account_delete(accountId: ID!): AccountResponse!
+}
+
+type Account {
+  _id: ID!
+  title: String!
+  roleArn: String!
+  updatedAt: DateTime!
+  createdAt: DateTime
+}
+
+type AccountResponse {
+  code: String!
+  success: Boolean!
+  data: Account
+  token: String
+}
+
+input AccountFilter {
+  title: String
+}
