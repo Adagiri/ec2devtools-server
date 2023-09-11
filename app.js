@@ -10,6 +10,7 @@ if (process.env.TEST_ENV === 'true') {
   allowedOrigins.push(
     'http://localhost:3000',
     'https://studio.apollographql.com',
+    'https://sandbox.ec2devtools.com'
   );
 }
 
@@ -19,7 +20,7 @@ app.use(cookieParser());
 app.use(
   helmet({
     contentSecurityPolicy:
-      process.env.NODE_ENV === 'production' && process.env.TEST_ENV === 'false'
+     process.env.TEST_ENV === 'false'
         ? true
         : false,
   })

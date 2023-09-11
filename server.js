@@ -47,20 +47,7 @@ async function startApolloServer() {
 
   await server.start();
 
-  let allowedOrigins = ['https://ec2devtools.com'];
-  if (process.env.TEST_ENV === 'true') {
-    allowedOrigins.push(
-      'http://localhost:3000',
-      'https://studio.apollographql.com'
-    );
-  }
-
-  const corsOption = {
-    credentials: true,
-    origin: allowedOrigins,
-  };
-
-  server.applyMiddleware({ app, path: '/graphql', cors: corsOption });
+  server.applyMiddleware({ app, path: '/graphql',});
 
   httpServer.listen(PORT, () => {
     console.log(`GRAPHQL SERVER RUNNING PORT: ${PORT} `);
