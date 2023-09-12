@@ -2,6 +2,7 @@ const asyncHandler = require('../middleware/async');
 const Account = require('../models/Account');
 const User = require('../models/User');
 const { ErrorResponse, SuccessResponse } = require('../utils/responses');
+const AwsService = require('../services/AwsService');
 
 module.exports.getAllAccounts = asyncHandler(async (_, args) => {
   const { filter, sort, skip, limit } = getQueryArguments(args);
@@ -25,6 +26,21 @@ module.exports.getAccountsForLoggedInUser = asyncHandler(
     return accounts;
   }
 );
+
+module.exports.getAccountRegions = asyncHandler(async (_, args, context) => {
+  const activeAccount = context.user.activeAccount;
+  if (!activeAccount) {
+    return new ErrorResponse(
+      400,
+      'To select a region, you must first add an account'
+    );
+  }
+
+  const accountId = activeAccount._id;
+  const regions = await AwsService.getRegions(accountId);
+
+  return regions;
+});
 
 module.exports.getAccountById = asyncHandler(async (_, args, context) => {
   const account = await Account.findById(args.accountId);
@@ -66,9 +82,15 @@ module.exports.addAccount = asyncHandler(async (_, args, context) => {
 
   const account = await Account.create(args);
 
-  await User.findByIdAndUpdate(context.user.id, {
-    hasCompletedOnboarding: true,
-  });
+  const user = await User.findById(userId);
+
+  if (!user.activeAccount) {
+    user.activeAccount = account._id;
+  }
+
+  user.hasCompletedOnboarding = true;
+
+  await user.save();
 
   return new SuccessResponse(201, true, account);
 });

@@ -1,5 +1,6 @@
 extend type Query {
   account: Account!
+  account_getRegions: [String!]!
   accounts: [Account!]!
   "React admin"
   Account(id: ID!): Account!
@@ -36,7 +37,7 @@ type Account {
   title: String!
   roleArn: String!
   updatedAt: DateTime!
-  createdAt: DateTime
+  createdAt: DateTime!
 }
 
 type AccountResponse {

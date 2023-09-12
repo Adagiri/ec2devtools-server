@@ -19,7 +19,9 @@ async function getUserInfo(token) {
 }
 
 async function protectUser(_, __, context) {
-  const user = await User.findById(context.user?.id).select('username photo');
+  const user = await User.findById(context.user?.id)
+    .populate('activeAccount')
+    .select('username photo activeAccount');
 
   if (!user) {
     return new ErrorResponse(401, 'Please login to continue');
