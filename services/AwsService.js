@@ -51,7 +51,7 @@ const getCredentials = async (accountId) => {
         credentials,
         { upsert: true }
       );
-
+      console.log(updatedCredentials, 'updatedCredentials');
       return updatedCredentials;
     }
 
@@ -98,104 +98,4 @@ const getRegions = async (accountId) => {
   }
 };
 
-const getInstanceTypes = async ({ accountId, instanceOption, region }) => {
-  try {
-    const { accessKeyId, secretAccessKey, sessionToken } = await getCredentials(
-      accountId
-    );
-
-    const config = new AWS.Config({
-      accessKeyId,
-      secretAccessKey,
-      sessionToken,
-      region: region,
-    });
-
-    const ec2 = new AWS.EC2(config);
-
-    const instanceTypesWithCost = [];
-
-    const instanceTypeData = await ec2
-      .describeInstanceTypes({
-        // MaxResults: 500,
-        Filters: [{ Name: 'current-generation', Values: ['true'] }],
-      })
-      .promise();
-
-    console.log(instanceTypeData.InstanceTypes, 'instance type data');
-
-    for (const instanceType of instanceTypeData.InstanceTypes) {
-      const instanceTypeInfo = await getInstanceTypeInfo(
-        instanceType.InstanceType,
-        instanceOption
-      );
-      instanceTypesWithCost.push({
-        type: instanceType.InstanceType,
-        monthlyPrice: instanceTypeInfo.monthlyCost,
-      });
-    }
-
-    console.log(instanceTypesWithCost, 'instance types with cost');
-
-    return instanceTypesWithCost;
-  } catch (error) {
-    console.log(error, 'Error occured whilst retrieving instance types');
-    throw new ErrorResponse(500, 'Internal server error');
-  }
-};
-
-async function getInstanceTypeInfo(instanceType, instanceOption) {
-  try {
-    const pricing = new AWS.Pricing({ region: 'us-east-1' }); // Change region as needed
-
-    const pricingParams = {
-      ServiceCode: 'AmazonEC2',
-      Filters: [
-        {
-          Type: 'TERM_MATCH',
-          Field: 'instanceType',
-          Value: instanceType,
-        },
-      ],
-    };
-
-    if (instanceOption === 'Spot') {
-      pricingParams.Filters.push({
-        Type: 'TERM_MATCH',
-        Field: 'preInstalledSw',
-        Value: 'NA', // Filter out Spot instances
-      });
-    }
-
-    const pricingData = await pricing.getProducts(pricingParams).promise();
-
-    // Extract pricing information
-    const pricePerHour = parseFloat(
-      pricingData.PriceList[0].terms.OnDemand[
-        Object.keys(pricingData.PriceList[0].terms.OnDemand)[0]
-      ].priceDimensions[
-        Object.keys(
-          pricingData.PriceList[0].terms.OnDemand[
-            Object.keys(pricingData.PriceList[0].terms.OnDemand)[0]
-          ].priceDimensions
-        )[0]
-      ].pricePerUnit.USD
-    );
-
-    // Calculate monthly cost
-    const monthlyCost = pricePerHour * 24 * 30; // Assuming an average of 30 days per month
-
-    return { monthlyCost };
-  } catch (error) {
-    console.log(error, 'Error occured whilst retrieving Instance Pricing Info');
-    throw new ErrorResponse(500, 'Internal server error');
-  }
-}
-
-// getInstanceTypes({
-//   accountId: '64fd7ee8abe86184e17f2631',
-//   instanceOption: 'OnDemand',
-//   region: DEFAULT_REGION,
-// });
-
-module.exports = { getRegions, getInstanceTypes };
+module.exports = { getRegions };
