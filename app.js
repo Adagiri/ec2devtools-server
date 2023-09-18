@@ -20,7 +20,7 @@ app.get('/', (req, res) => {
   res.send(`Deploying`);
 });
 
-app.get('/api/update-instance-types', async (req, res) => {
+app.post('/api/update-instance-types', async (req, res) => {
   try {
     await InstanceType.updateInstanceTypes();
     return res.sendStatus(200);
