@@ -2,6 +2,8 @@ const express = require('express');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const InstanceType = require('./services/InstanceType');
+const { generateEmailArguments } = require('./utils/general');
+const { sendEmail } = require('./services/AwsService');
 
 const app = express();
 
@@ -24,6 +26,7 @@ app.get('/api/update-instance-types', async (req, res) => {
     return res.sendStatus(200);
   } catch (error) {
     console.log(error, 'error occured whilst updating instance types');
+
     return res.sendStatus(500).send(error);
   }
 });

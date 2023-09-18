@@ -1,8 +1,8 @@
 const AWS = require('aws-sdk');
-
+const crypto = require('crypto');
 const Account = require('../models/Account');
 const TemporaryCredential = require('../models/TemporaryCredential');
-const { generateRandomString } = require('../utils/general');
+const { generateRandomString, decrypt, encrypt } = require('../utils/general');
 const { ErrorResponse } = require('../utils/responses');
 
 const DEFAULT_REGION = 'us-east-1';
@@ -12,12 +12,35 @@ const credentials = {
 };
 AWS.config.update({ credentials: credentials });
 
+const handleCredentialsEncrypt = (credentials) => {
+  const cred = { ...credentials };
+  const toEncrypt = ['accessKeyId', 'secretAccessKey', 'sessionToken'];
+
+  for (const element of toEncrypt) {
+    const data = cred[element];
+    cred[element] = encrypt(data);
+  }
+  return cred;
+};
+
+const handleCredentialsDecrypt = (credentials) => {
+  const cred = credentials;
+  const toDecrypt = ['accessKeyId', 'secretAccessKey', 'sessionToken'];
+
+  for (const element of toDecrypt) {
+    const data = cred[element];
+    cred[element] = decrypt(data);
+  }
+
+  return cred;
+};
+
 const getCredentials = async (accountId) => {
   try {
     const now = new Date();
     const tenMinutesLater = new Date(now.getTime() + 10 * 60 * 1000);
 
-    const existingCredentials = await TemporaryCredential.findOne({
+    let existingCredentials = await TemporaryCredential.findOne({
       account: accountId,
       expirationTime: { $gt: tenMinutesLater },
     });
@@ -36,8 +59,6 @@ const getCredentials = async (accountId) => {
       const { AccessKeyId, SecretAccessKey, SessionToken, Expiration } =
         data.Credentials;
 
-      console.log(data, 'temporary credentials data');
-
       const credentials = {
         accessKeyId: AccessKeyId,
         secretAccessKey: SecretAccessKey,
@@ -45,17 +66,20 @@ const getCredentials = async (accountId) => {
         expirationTime: Expiration,
       };
 
+      const encryptedCredentials = handleCredentialsEncrypt(credentials);
+
       // Create or update to a new credential
-      const updatedCredentials = await TemporaryCredential.findOneAndUpdate(
+      await TemporaryCredential.findOneAndUpdate(
         { account: accountId },
-        credentials,
+        encryptedCredentials,
         { upsert: true }
       );
-      console.log(updatedCredentials, 'updatedCredentials');
-      return updatedCredentials;
+
+      return credentials;
     }
 
-    return existingCredentials;
+    const decryptedCredentials = handleCredentialsDecrypt(existingCredentials);
+    return decryptedCredentials;
   } catch (error) {
     console.log(error, 'Error occured whilst retrieving credentials');
 
@@ -90,6 +114,7 @@ const getRegions = async (accountId) => {
         region.IsDefault || region.OptInStatus === 'opt-in-not-required'
     ).map((region) => region.RegionName);
 
+    console.log(regions, 'regions');
     return regions;
   } catch (error) {
     console.log(error, 'Error occured whilst retrieving regions');
@@ -98,4 +123,12 @@ const getRegions = async (accountId) => {
   }
 };
 
-module.exports = { getRegions };
+const sendEmail = (params) => {
+  const ses = new AWS.SES({
+    credentials: credentials,
+    region: DEFAULT_REGION,
+  });
+  return ses.sendEmail(params).promise();
+};
+
+module.exports = { getRegions, sendEmail };

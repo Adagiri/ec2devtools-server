@@ -1,6 +1,8 @@
 const AWS = require('aws-sdk');
 
 const InstanceType = require('../models/InstanceType');
+const { generateEmailArguments } = require('../utils/general');
+const { sendEmail } = require('./AwsService');
 
 const DEFAULT_REGION = 'us-east-1';
 
@@ -15,6 +17,31 @@ const ec2 = new AWS.EC2({
   region: DEFAULT_REGION,
   credentials: credentials,
 });
+
+const sendSuccessEmail = async ({
+  priceUpdateStartTime,
+  priceUpdateEndTime,
+}) => {
+  const params = generateEmailArguments(
+    null,
+    'ibrahimridwan47@gmail.com',
+    'Instance Price Update Completed',
+    `Instance Price Update completed successfully. Started at: ${priceUpdateStartTime} and ended at: ${priceUpdateEndTime}`
+  );
+
+  await sendEmail(params);
+};
+
+const sendFailureEmail = async (error) => {
+  const params = generateEmailArguments(
+    null,
+    'ibrahimridwan47@gmail.com',
+    'Instance Types Update Failed',
+    JSON.stringify(error)
+  );
+
+  await sendEmail(params);
+};
 
 const fetchOnDemandPrice = async ({ region, instanceType }) => {
   const pricing = new AWS.Pricing({
@@ -177,6 +204,7 @@ const getAllAwsRegions = async () => {
 
 const updateInstanceTypePrices = async () => {
   try {
+    const priceUpdateStartTime = new Date();
     const awsRegions = await getAllAwsRegions();
 
     const today = new Date();
@@ -184,7 +212,7 @@ const updateInstanceTypePrices = async () => {
     const instanceTypes = await InstanceType.find({
       updatedAt: { $ne: todayString },
     }).select('type updatedAt');
-    console.log(instanceTypes.length, 'instance types count');
+
     let count = 0;
     // Fetch prices for each instance type and update in the database
     for (const instanceType of instanceTypes) {
@@ -210,7 +238,7 @@ const updateInstanceTypePrices = async () => {
       }
 
       // Update the instance type price in the database
-      console.log(instanceType.type, updates);
+      // console.log(instanceType.type, updates);
       await InstanceType.findByIdAndUpdate(instanceType._id, updates);
       updates = {};
       count++;
@@ -218,6 +246,9 @@ const updateInstanceTypePrices = async () => {
     }
 
     console.log('Instance type prices updated successfully.');
+    const priceUpdateEndTime = new Date();
+    await sendSuccessEmail({ priceUpdateStartTime, priceUpdateEndTime });
+    await sendEmail();
   } catch (error) {
     console.error('Error updating instance type prices:', error);
     throw error;
@@ -288,6 +319,8 @@ const updateInstanceTypes = async () => {
     await updateInstanceTypePrices();
   } catch (error) {
     console.log('Error occured whilst updating instance types: ', error);
+
+    await sendFailureEmail(error);
     throw error;
   }
 };
