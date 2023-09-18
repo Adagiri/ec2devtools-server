@@ -18,6 +18,17 @@ const ec2 = new AWS.EC2({
   credentials: credentials,
 });
 
+const sendStartEmail = async () => {
+  const params = generateEmailArguments(
+    null,
+    'ibrahimridwan47@gmail.com',
+    'Instance Price Update Process started',
+    `Instance Price Update Process Started at: ${new Date()}`
+  );
+
+  await sendEmail(params);
+};
+
 const sendSuccessEmail = async ({
   priceUpdateStartTime,
   priceUpdateEndTime,
@@ -204,6 +215,7 @@ const getAllAwsRegions = async () => {
 
 const updateInstanceTypePrices = async () => {
   try {
+    await sendStartEmail();
     const priceUpdateStartTime = new Date();
     const awsRegions = await getAllAwsRegions();
 
