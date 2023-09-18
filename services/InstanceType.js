@@ -260,7 +260,6 @@ const updateInstanceTypePrices = async () => {
     console.log('Instance type prices updated successfully.');
     const priceUpdateEndTime = new Date();
     await sendSuccessEmail({ priceUpdateStartTime, priceUpdateEndTime });
-    await sendEmail();
   } catch (error) {
     console.error('Error updating instance type prices:', error);
     throw error;

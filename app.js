@@ -22,7 +22,7 @@ app.get('/', (req, res) => {
 
 app.post('/api/update-instance-types', async (req, res) => {
   try {
-    await InstanceType.updateInstanceTypes();
+    InstanceType.updateInstanceTypes();
     return res.sendStatus(200);
   } catch (error) {
     console.log(error, 'error occured whilst updating instance types');

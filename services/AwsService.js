@@ -123,12 +123,17 @@ const getRegions = async (accountId) => {
   }
 };
 
-const sendEmail = (params) => {
-  const ses = new AWS.SES({
-    credentials: credentials,
-    region: DEFAULT_REGION,
-  });
-  return ses.sendEmail(params).promise();
+const sendEmail = async (params) => {
+  try {
+    const ses = new AWS.SES({
+      credentials: credentials,
+      region: DEFAULT_REGION,
+    });
+    
+    await ses.sendEmail(params).promise();
+  } catch (error) {
+    console.log('Error occured whilst sending email through SES', error);
+  }
 };
 
 module.exports = { getRegions, sendEmail };
