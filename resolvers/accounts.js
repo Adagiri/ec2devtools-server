@@ -7,6 +7,7 @@ const {
   addAccount,
   editAccount,
   deleteAccount,
+  switchAccount,
 } = require('../controllers/accounts.js');
 const { protectAdmin, protectUser } = require('../middleware/auth.js');
 
@@ -22,6 +23,7 @@ module.exports = {
   },
   Mutation: {
     account_add: combineResolvers(protectUser, addAccount),
+    account_switch: combineResolvers(protectUser, switchAccount),
     account_edit: combineResolvers(protectUser, editAccount),
     account_delete: combineResolvers(protectUser, deleteAccount),
   },

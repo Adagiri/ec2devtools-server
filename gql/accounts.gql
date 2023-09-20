@@ -30,6 +30,7 @@ extend type Mutation {
     roleArn: String!
   ): AccountResponse!
   account_delete(accountId: ID!): AccountResponse!
+  account_switch(accountId: ID!): AccountResponse!
 }
 
 type Account {

@@ -115,6 +115,20 @@ module.exports.editAccount = asyncHandler(async (_, args, context) => {
   return new SuccessResponse(200, true, account);
 });
 
+module.exports.switchAccount = asyncHandler(async (_, args, context) => {
+  const userId = context.user.id;
+
+  const account = await Account.findById(args.accountId);
+
+  if (account.user.toString() !== userId) {
+    return new ErrorResponse(403, `You are not authorized for this action`);
+  }
+
+  await User.findByIdAndUpdate(userId, { activeAccount: args.accountId });
+
+  return new SuccessResponse(200, true, account);
+});
+
 module.exports.deleteAccount = asyncHandler(async (_, args, context) => {
   const userId = context.user.id;
   const account = await Account.findById(args.accountId);

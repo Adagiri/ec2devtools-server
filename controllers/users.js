@@ -27,7 +27,7 @@ module.exports.getUserById = asyncHandler(async (_, args) => {
 });
 
 module.exports.getLoggedInUser = asyncHandler(async (_, args, context) => {
-  const user = await User.findById(context.user.id);
+  const user = await User.findById(context.user.id).populate('activeAccount');
 
   return user;
 });
