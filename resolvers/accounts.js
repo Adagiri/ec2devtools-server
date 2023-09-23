@@ -15,7 +15,7 @@ module.exports = {
   Query: {
     account: combineResolvers(protectUser, getAccountById),
     accounts: combineResolvers(protectUser, getAccountsForLoggedInUser),
-    account_getRegions: combineResolvers(protectUser, getAccountRegions),
+    account_regions: combineResolvers(protectUser, getAccountRegions),
 
     // React Admin
     Account: combineResolvers(protectAdmin, getAccountById),

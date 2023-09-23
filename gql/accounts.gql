@@ -1,6 +1,6 @@
 extend type Query {
   account: Account!
-  account_getRegions: [String!]!
+  account_regions: [String!]!
   accounts: [Account!]!
   "React admin"
   Account(id: ID!): Account!
