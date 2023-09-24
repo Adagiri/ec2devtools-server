@@ -1,5 +1,5 @@
 extend type Query {
-  serverTypes(
+  server_types(
     instanceOption: AwsInstanceOption!
     region: String!
   ): [ServerType!]!

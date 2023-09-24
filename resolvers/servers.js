@@ -1,12 +1,10 @@
 const { combineResolvers } = require('graphql-resolvers');
-const {
-  getServerTypes,
-} = require('../controllers/servers.js');
+const { getServerTypes } = require('../controllers/servers.js');
 const { protectUser } = require('../middleware/auth.js');
 
 module.exports = {
   Query: {
-    serverTypes: combineResolvers(protectUser, getServerTypes),
+    server_types: combineResolvers(protectUser, getServerTypes),
   },
   Mutation: {},
 };

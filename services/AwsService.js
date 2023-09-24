@@ -123,13 +123,42 @@ const getRegions = async (accountId) => {
   }
 };
 
+const getInstanceTypes = async ({ accountId, instanceOption, region }) => {
+  try {
+    const { accessKeyId, secretAccessKey, sessionToken } = await getCredentials(
+      accountId
+    );
+
+    const config = new AWS.Config({
+      accessKeyId,
+      secretAccessKey,
+      sessionToken,
+      region: DEFAULT_REGION,
+    });
+
+    const ec2 = new AWS.EC2(config);
+
+    const data = await ec2.describeRegions().promise();
+    const regions = data.Regions.filter(
+      (region) =>
+        region.IsDefault || region.OptInStatus === 'opt-in-not-required'
+    ).map((region) => region.RegionName);
+
+    console.log(regions, 'regions');
+    return regions;
+  } catch (error) {
+    console.log(error, 'Error occured whilst retrieving regions');
+    console.log(error.code);
+    throw error;
+  }
+};
 const sendEmail = async (params) => {
   try {
     const ses = new AWS.SES({
       credentials: credentials,
       region: DEFAULT_REGION,
     });
-    
+
     await ses.sendEmail(params).promise();
   } catch (error) {
     console.log('Error occured whilst sending email through SES', error);
