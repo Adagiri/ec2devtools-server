@@ -8,7 +8,6 @@ async function getUserInfo(token) {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
-    console.log(payload, 'payload');
     if (payload) {
       return payload;
     }

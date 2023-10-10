@@ -130,10 +130,11 @@ module.exports.switchAccount = asyncHandler(async (_, args, context) => {
 });
 
 module.exports.deleteAccount = asyncHandler(async (_, args, context) => {
-  const userId = context.user.id;
+  const user = await User.findById(context.user.id);
+
   const account = await Account.findById(args.accountId);
 
-  if (account.user.toString() !== userId) {
+  if (account.user.toString() !== user._id.toString()) {
     return new ErrorResponse(
       403,
       `You are not authorized to delete this account`
@@ -141,6 +142,17 @@ module.exports.deleteAccount = asyncHandler(async (_, args, context) => {
   }
 
   await account.remove();
+
+  if (user.activeAccount.toString() === args.accountId) {
+    const userAccounts = await Account.find({ user: user._id });
+
+    // Set the active-account status for any additional accounts associated with the user
+    if (userAccounts.length > 0) {
+      user.activeAccount = userAccounts[0]._id;
+    }
+
+    await user.save();
+  }
 
   return new SuccessResponse(200, true, account);
 });

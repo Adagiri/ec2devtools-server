@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
+const General = require('../models/General');
 
 const generateRandomKey = () => {
   return crypto.randomBytes(32).toString('hex');
@@ -133,4 +134,69 @@ module.exports.decrypt = (encryptedText) => {
   decrypted += decipher.final('utf-8');
 
   return decrypted;
+};
+
+module.exports.getImageId = async () => {
+  try {
+    const general = await General.findOne();
+    return general.ec2BaseImageId;
+  } catch (error) {
+    console.log('Error occured whilst getting Base Ec2 Image Id: ', error);
+    throw error;
+  }
+};
+
+module.exports.extractServerData = (data) => {
+  const extract = {};
+  extract.serverId = data.InstanceId;
+  extract.type = data.InstanceType;
+  extract.launchTime = data.LaunchTime;
+
+  const tags = data.Tags;
+  const nameTag = tags.find((tag) => tag.Key === 'name');
+  const regionTag = tags.find((tag) => tag.Key === 'region');
+  const publicIpTag = tags.find((tag) => tag.Key === 'publicIp');
+  const ipAllocationIdTag = tags.find((tag) => tag.Key === 'ipAllocationId');
+  const isSpotTag = tags.find((tag) => tag.Key === 'isSpot');
+
+  extract.name = nameTag ? nameTag.Value : null;
+  extract.region = regionTag ? regionTag.Value : null;
+  extract.publicIp = publicIpTag ? publicIpTag.Value : null;
+  extract.ipAllocationId = ipAllocationIdTag ? ipAllocationIdTag.Value : null;
+  if (isSpotTag && isSpotTag.Value === 'true') {
+    extract.option = 'Spot';
+  } else {
+    extract.option = 'OnDemand';
+  }
+
+  return extract;
+};
+
+module.exports.getTransformedServerTypes = ({
+  serverTypes,
+  instanceOption,
+  region,
+}) => {
+  // Filter
+  let transformedServerTypes = serverTypes.filter(
+    (serverType) =>
+      serverType[instanceOption][region] !== 0 &&
+      serverType[instanceOption][region] !== null &&
+      serverType[instanceOption][region] !== undefined
+  );
+
+  // Sort
+  transformedServerTypes = transformedServerTypes.sort(
+    (a, b) => a[instanceOption][region] - b[instanceOption][region]
+  );
+
+  // Transform
+  transformedServerTypes = transformedServerTypes.map((serverType) => ({
+    type: serverType.type,
+    monthlyCost: serverType[instanceOption][region],
+    memory: serverType.memorySizeInMiB || 0,
+    cpu: serverType.vcpu || 0,
+  }));
+
+  return transformedServerTypes;
 };

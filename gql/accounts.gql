@@ -1,6 +1,6 @@
 extend type Query {
   account: Account!
-  account_regions: [String!]!
+  account_regions: [AccountRegion!]!
   accounts: [Account!]!
   "React admin"
   Account(id: ID!): Account!
@@ -46,6 +46,11 @@ type AccountResponse {
   success: Boolean!
   data: Account
   token: String
+}
+
+type AccountRegion {
+  name: String!
+  location: String!
 }
 
 input AccountFilter {

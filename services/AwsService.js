@@ -1,5 +1,4 @@
 const AWS = require('aws-sdk');
-const crypto = require('crypto');
 const Account = require('../models/Account');
 const TemporaryCredential = require('../models/TemporaryCredential');
 const { generateRandomString, decrypt, encrypt } = require('../utils/general');
@@ -11,6 +10,36 @@ const credentials = {
   secretAccessKey: process.env.AWS_SECRET_KEY,
 };
 AWS.config.update({ credentials: credentials });
+
+const awsRegionNamesAndLocations = {
+  'us-east-1': 'Virginia',
+  'us-east-2': 'Ohio',
+  'us-west-1': 'Oregon',
+  'us-west-2': 'California',
+  'ca-central-1': 'Canada',
+  'eu-central-1': 'Frankfurt, Germany',
+  'eu-west-1': 'Ireland',
+  'eu-west-2': 'London, United Kingdom',
+  'eu-west-3': 'Paris, France',
+  'eu-north-1': 'Stockholm, Sweden',
+  'eu-south-1': 'Milan, Italy',
+  'ap-northeast-1': 'Tokyo, Japan',
+  'ap-northeast-2': 'Seoul, South Korea',
+  'ap-southeast-1': 'Singapore',
+  'ap-southeast-2': 'Sydney, Australia',
+  'ap-south-1': 'Mumbai, India',
+  'sa-east-1': 'São Paulo, Brazil',
+  'me-south-1': 'Bahrain',
+  'af-south-1': 'Cape Town, South Africa',
+  'ap-east-1': 'Hong Kong',
+  'ap-southeast-3': 'Jakarta, Indonesia',
+  'ap-southeast-5': 'Auckland, New Zealand',
+  'eu-south-2': 'Barcelona, Spain',
+  'eu-west-4': 'Amsterdam, Netherlands',
+  'me-central-1': 'Al Ain, United Arab Emirates',
+  'us-gov-east-1': 'Virginia',
+  'us-gov-west-1': 'Oregon',
+};
 
 const handleCredentialsEncrypt = (credentials) => {
   const cred = { ...credentials };
@@ -108,13 +137,18 @@ const getRegions = async (accountId) => {
 
     const ec2 = new AWS.EC2(config);
 
-    const data = await ec2.describeRegions().promise();
-    const regions = data.Regions.filter(
-      (region) =>
-        region.IsDefault || region.OptInStatus === 'opt-in-not-required'
-    ).map((region) => region.RegionName);
+    const params = {
+      AllRegions: true,
+    };
 
-    console.log(regions, 'regions');
+    const data = await ec2.describeRegions(params).promise();
+    console.log(data, 'data');
+    const regions = data.Regions.map((region) => ({
+      name: region.RegionName,
+      location:
+        awsRegionNamesAndLocations[region.RegionName] || region.RegionName,
+    }));
+
     return regions;
   } catch (error) {
     console.log(error, 'Error occured whilst retrieving regions');
@@ -123,35 +157,6 @@ const getRegions = async (accountId) => {
   }
 };
 
-const getInstanceTypes = async ({ accountId, instanceOption, region }) => {
-  try {
-    const { accessKeyId, secretAccessKey, sessionToken } = await getCredentials(
-      accountId
-    );
-
-    const config = new AWS.Config({
-      accessKeyId,
-      secretAccessKey,
-      sessionToken,
-      region: DEFAULT_REGION,
-    });
-
-    const ec2 = new AWS.EC2(config);
-
-    const data = await ec2.describeRegions().promise();
-    const regions = data.Regions.filter(
-      (region) =>
-        region.IsDefault || region.OptInStatus === 'opt-in-not-required'
-    ).map((region) => region.RegionName);
-
-    console.log(regions, 'regions');
-    return regions;
-  } catch (error) {
-    console.log(error, 'Error occured whilst retrieving regions');
-    console.log(error.code);
-    throw error;
-  }
-};
 const sendEmail = async (params) => {
   try {
     const ses = new AWS.SES({
@@ -165,4 +170,4 @@ const sendEmail = async (params) => {
   }
 };
 
-module.exports = { getRegions, sendEmail };
+module.exports = { getRegions, sendEmail, getCredentials };

@@ -54,50 +54,6 @@ const sendFailureEmail = async (error) => {
   await sendEmail(params);
 };
 
-const fetchOnDemandPrice = async ({ region, instanceType }) => {
-  const pricing = new AWS.Pricing({
-    region: region,
-    credentials: credentials,
-  });
-
-  try {
-    const params = {
-      ServiceCode: 'AmazonEC2',
-      Filters: [
-        { Type: 'TERM_MATCH', Field: 'instanceType', Value: instanceType },
-        { Type: 'TERM_MATCH', Field: 'tenancy', Value: 'shared' },
-        { Type: 'TERM_MATCH', Field: 'operatingSystem', Value: 'Linux' }, // Adjust for your OS
-        { Type: 'TERM_MATCH', Field: 'preInstalledSw', Value: 'NA' },
-      ],
-    };
-
-    const data = await pricing.getProducts(params).promise();
-
-    if (data.PriceList.length > 0) {
-      console.log(data.PriceList[0], data.PriceList.length);
-      const product = data.PriceList[0];
-      const terms = product.terms.OnDemand;
-      const priceDimensions = terms[Object.keys(terms)[0]].priceDimensions;
-      const onDemandPrice =
-        priceDimensions[Object.keys(priceDimensions)[0]].pricePerUnit.USD;
-
-      if (onDemandPrice) {
-        console.log(onDemandPrice, 'onDemand price');
-        return parseFloat(onDemandPrice);
-      } else {
-        console.log(`No on-demand price found for ${instanceType}.`);
-        return null;
-      }
-    } else {
-      console.log(`No on-demand price found for ${instanceType}.`);
-      return null;
-    }
-  } catch (error) {
-    console.error('Error fetching on-demand price:', error);
-    throw error;
-  }
-};
-
 const fetchAverageSpotPrice = async ({ instanceType, region }) => {
   const ec2 = new AWS.EC2({
     region: region,
@@ -169,33 +125,6 @@ const fetchOnDemandPriceAllRegions = async ({ instanceType }) => {
     }
   } catch (error) {
     console.error('Error fetching on-demand prices:', error);
-    throw error;
-  }
-};
-
-const fetchSpotPrice = async ({ region, instanceType }) => {
-  const ec2 = new AWS.EC2({
-    region: region,
-    credentials: credentials,
-  });
-
-  try {
-    const spotParams = {
-      InstanceTypes: [instanceType],
-      ProductDescriptions: ['Linux/UNIX'], // Adjust for your OS
-      StartTime: new Date(),
-      EndTime: new Date(),
-    };
-
-    const spotPrices = await ec2.describeSpotPriceHistory(spotParams).promise();
-    if (spotPrices.SpotPriceHistory.length > 0) {
-      return spotPrices.SpotPriceHistory[0].SpotPrice;
-    } else {
-      console.log(`No spot price found for ${instanceType}.`);
-      return null;
-    }
-  } catch (error) {
-    console.error('Error fetching spot price:', error);
     throw error;
   }
 };
@@ -298,13 +227,15 @@ const fetchAndUpdateInstanceTypes = async () => {
 
       console.log('Instance types fetched successfully.');
 
+      console.log(instanceTypeData.InstanceTypes);
       const instanceTypes = instanceTypeData.InstanceTypes.map(
         (instanceType) => ({
           type: instanceType.InstanceType,
           currentGeneration: instanceType.CurrentGeneration,
           freeTierEligible: instanceType.FreeTierEligible,
           supportedUsageClass: instanceType.SupportedUsageClass,
-          memoryInfo: instanceType.MemoryInfo,
+          memorySizeInMiB: instanceType.MemoryInfo.SizeInMiB,
+          vcpu: instanceType.VCpuInfo.DefaultVCpus,
         })
       );
 

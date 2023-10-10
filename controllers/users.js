@@ -76,6 +76,7 @@ module.exports.login = asyncHandler(async (_, args, context) => {
       httpOnly: true,
       secure: true,
       path: '/',
+      sameSite: 'None', // Set SameSite attribute to None
     };
 
     console.log(options, 'options');
