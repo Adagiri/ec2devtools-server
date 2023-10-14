@@ -1,5 +1,6 @@
 extend type Query {
   account: Account!
+  account_regions: [AccountRegion!]!
   accounts: [Account!]!
   "React admin"
   Account(id: ID!): Account!
@@ -29,6 +30,7 @@ extend type Mutation {
     roleArn: String!
   ): AccountResponse!
   account_delete(accountId: ID!): AccountResponse!
+  account_switch(accountId: ID!): AccountResponse!
 }
 
 type Account {
@@ -36,7 +38,7 @@ type Account {
   title: String!
   roleArn: String!
   updatedAt: DateTime!
-  createdAt: DateTime
+  createdAt: DateTime!
 }
 
 type AccountResponse {
@@ -44,6 +46,11 @@ type AccountResponse {
   success: Boolean!
   data: Account
   token: String
+}
+
+type AccountRegion {
+  name: String!
+  location: String!
 }
 
 input AccountFilter {

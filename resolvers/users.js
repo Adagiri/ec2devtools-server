@@ -5,6 +5,7 @@ const {
   getAllUsers,
   signup,
   login,
+  signout,
 } = require('../controllers/users.js');
 const { protectUser, protectAdmin } = require('../middleware/auth');
 
@@ -18,5 +19,6 @@ module.exports = {
   Mutation: {
     signup: signup,
     login: login,
+    signout: combineResolvers(protectUser, signout),
   },
 };

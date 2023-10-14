@@ -28,6 +28,7 @@ extend type Mutation {
     email: String
   ): UserResponse!
   login(githubId: String!): UserResponse!
+  signout: DefaultResponse!
 }
 
 type User {
@@ -36,6 +37,7 @@ type User {
   email: String
   photoURL: String
   hasCompletedOnboarding: Boolean!
+  activeAccount: Account
 }
 
 type UserResponse {

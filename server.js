@@ -51,7 +51,8 @@ async function startApolloServer() {
   if (process.env.TEST_ENV === 'true') {
     allowedOrigins.push(
       'http://localhost:3000',
-      'https://studio.apollographql.com'
+      'https://studio.apollographql.com',
+      'https://sandbox.ec2devtools.com'
     );
   }
 

@@ -7,6 +7,10 @@ const AccountSchema = new mongoose.Schema({
     required: true,
   },
 
+  activeServerRegions: {
+    type: [String],
+  },
+
   title: {
     type: String,
     required: true,

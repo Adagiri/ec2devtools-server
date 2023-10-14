@@ -27,7 +27,7 @@ module.exports.getUserById = asyncHandler(async (_, args) => {
 });
 
 module.exports.getLoggedInUser = asyncHandler(async (_, args, context) => {
-  const user = await User.findById(context.user.id);
+  const user = await User.findById(context.user.id).populate('activeAccount');
 
   return user;
 });
@@ -76,6 +76,7 @@ module.exports.login = asyncHandler(async (_, args, context) => {
       httpOnly: true,
       secure: true,
       path: '/',
+      sameSite: 'None', // Set SameSite attribute to None
     };
 
     console.log(options, 'options');
@@ -83,4 +84,22 @@ module.exports.login = asyncHandler(async (_, args, context) => {
     context.res.cookie('token', token, options);
     return new SuccessResponse(200, true, existingUser);
   }
+});
+
+module.exports.signout = asyncHandler(async (_, __, context) => {
+  // Set the expiration date to a time in the past (e.g., one second ago)
+  const pastExpirationDate = new Date(0);
+
+  // Define the options with the past expiration date
+  const options = {
+    expires: pastExpirationDate,
+    httpOnly: true,
+    secure: true,
+    path: '/',
+  };
+
+  // Clear the existing 'token' cookie by setting it to expire in the past
+  context.res.cookie('token', '', options);
+
+  return new SuccessResponse(200, true);
 });

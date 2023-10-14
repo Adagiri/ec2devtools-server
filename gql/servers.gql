@@ -1,0 +1,57 @@
+extend type Query {
+  server(serverId: String!, region: String!): Server!
+  servers: [Server!]!
+  server_types(
+    serverOption: AwsInstanceOption!
+    region: String!
+  ): [ServerType!]!
+  server_getStatus(serverId: String!, region: String!): ServerStatus!
+}
+
+extend type Mutation {
+  server_create(
+    name: String!
+    region: String!
+    option: AwsInstanceOption!
+    type: String!
+  ): ServerResponse!
+  server_delete(
+    serverId: String!
+    ipAllocationId: String!
+    region: String!
+  ): DefaultResponse!
+}
+
+type ServerResponse {
+  code: String!
+  success: Boolean!
+  data: Server!
+}
+
+type ServerType {
+  type: String!
+  monthlyCost: Float!
+  memory: Float!
+  cpu: Float!
+}
+
+type Server {
+  serverId: String!
+  ipAllocationId: String!
+  name: String!
+  region: String!
+  type: String!
+  publicIp: String!
+  option: AwsInstanceOption!
+  launchTime: String!
+}
+
+type ServerStatus {
+  status: String!
+  state: String!
+}
+
+enum AwsInstanceOption {
+  OnDemand
+  Spot
+}
