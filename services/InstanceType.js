@@ -134,7 +134,7 @@ const getAllAwsRegions = async () => {
     const data = await ec2.describeRegions().promise();
     const regions = data.Regions.map((region) => region.RegionName);
 
-    console.log('Aws regions retrieved successfully; total: ', regions.length);
+    // console.log('Aws regions retrieved successfully; total: ', regions.length);
     return regions;
   } catch (error) {
     console.error('Error occured whilst retrieving regions: ', error);
