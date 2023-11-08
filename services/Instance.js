@@ -431,7 +431,7 @@ const launchEc2Instance = async ({
     await releaseElastiIp({ accountId, elasticIpAllocationId, region });
 
     if (error.code === 'InsufficientInstanceCapacity') {
-      throw `No spot instance available for ${type} in the ${region} at this time`;
+      throw `No spot instance available for ${type} in the ${region} region at this time`;
     }
     throw error;
   }
