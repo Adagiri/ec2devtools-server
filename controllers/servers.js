@@ -12,7 +12,7 @@ const {
   getInstance,
 } = require('../services/Instance');
 const { getTransformedServerTypes } = require('../utils/general');
-const { SuccessResponse } = require('../utils/responses');
+const { SuccessResponse, ErrorResponse } = require('../utils/responses');
 
 module.exports.getServerTypes = asyncHandler(async (_, args) => {
   const region = args.region;
@@ -50,16 +50,8 @@ module.exports.getServer = asyncHandler(async (_, args, context) => {
 module.exports.getServers = asyncHandler(async (_, args, context) => {
   const activeAccount = context.user.activeAccount;
   if (!activeAccount) {
-    return new ErrorResponse(
-      400,
-      "You currently don't possess an active AWS account, which is necessary for launching a server."
-    );
+    return [];
   }
-
-  const accountId = activeAccount._id;
-  const regions = activeAccount.activeServerRegions;
-
-  const servers = await getInstancesInAllRegions({ accountId, regions });
 
   return servers;
 });

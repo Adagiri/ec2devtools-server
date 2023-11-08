@@ -22,7 +22,6 @@ module.exports.getAccountsForLoggedInUser = asyncHandler(
     let accounts = await Account.find({
       user: context.user.id,
     });
-    console.log('ran');
     return accounts;
   }
 );
