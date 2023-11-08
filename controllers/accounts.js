@@ -69,17 +69,19 @@ module.exports.addAccount = asyncHandler(async (_, args, context) => {
   args.user = userId;
 
   const existingAccount = await Account.findOne({
-    user: userId,
     roleArn: args.roleArn,
   });
 
   if (existingAccount) {
     return new ErrorResponse(
       400,
-      `Account already exists by name: ${existingAccount.title}`
+      `The provided role ARN, ${args.roleArn}, already exists. Please create a different role to obtain a new unique role ARN and try again.`
     );
   }
 
+  const resp = await AwsService.whitelistRole(args.roleArn);
+
+  args.awsRole = resp.awsRole;
   const account = await Account.create(args);
 
   const user = await User.findById(userId);
@@ -141,6 +143,11 @@ module.exports.deleteAccount = asyncHandler(async (_, args, context) => {
     );
   }
 
+  await AwsService.blacklistRole({
+    awsRoleId: account.awsRole,
+    trustedEntity: account.roleArn,
+  });
+
   await account.remove();
 
   if (user.activeAccount.toString() === args.accountId) {
@@ -149,6 +156,8 @@ module.exports.deleteAccount = asyncHandler(async (_, args, context) => {
     // Set the active-account status for any additional accounts associated with the user
     if (userAccounts.length > 0) {
       user.activeAccount = userAccounts[0]._id;
+    } else {
+      user.activeAccount = undefined;
     }
 
     await user.save();

@@ -5,6 +5,53 @@ const { getCredentials } = require('./AwsService');
 const { ErrorResponse } = require('../utils/responses');
 const Account = require('../models/Account');
 
+const userDataString = `
+#!/bin/bash
+
+sudo mkdir /home/ubuntu/devtools
+`;
+let userDataBase64 = Buffer.from(userDataString).toString('base64');
+
+console.log(typeof userDataBase64);
+const KEY_PAIR_NAME = 'first-keypair';
+const SG_NAME = 'ec2devtools-allow-all-http-https-ssh-traffic';
+const SG_DESCRIPTION = 'Allow all http, https, and ssh traffic';
+const SG_IP_PERMISSIONS = [
+  {
+    IpProtocol: 'tcp',
+    FromPort: 80, // HTTP
+    ToPort: 80,
+    IpRanges: [{ CidrIp: '0.0.0.0/0' }],
+    Ipv6Ranges: [
+      {
+        CidrIpv6: '::/0',
+      },
+    ],
+  },
+  {
+    IpProtocol: 'tcp',
+    FromPort: 443, // HTTPS
+    ToPort: 443,
+    IpRanges: [{ CidrIp: '0.0.0.0/0' }],
+    Ipv6Ranges: [
+      {
+        CidrIpv6: '::/0',
+      },
+    ],
+  },
+  {
+    IpProtocol: 'tcp',
+    FromPort: 22, // SSH
+    ToPort: 22,
+    IpRanges: [{ CidrIp: '0.0.0.0/0' }],
+    Ipv6Ranges: [
+      {
+        CidrIpv6: '::/0',
+      },
+    ],
+  },
+];
+
 const generateTagSpecifications = (extraTags) => [
   {
     ResourceType: 'instance',
@@ -154,6 +201,155 @@ const associateElasticIpAndSaveRegion = async ({
   }
 };
 
+const deleteSecurityGroup = async ({ securityGroupId, accountId, region }) => {
+  const params = {
+    GroupId: securityGroupId,
+  };
+
+  try {
+    const { accessKeyId, secretAccessKey, sessionToken } = await getCredentials(
+      accountId
+    );
+
+    const config = new AWS.Config({
+      accessKeyId,
+      secretAccessKey,
+      sessionToken,
+      region: region,
+    });
+
+    const ec2 = new AWS.EC2(config);
+    await ec2.deleteSecurityGroup(params).promise();
+    console.log('Security group deleted:', securityGroupId);
+  } catch (error) {
+    console.error('Error deleting security group:', error);
+    throw error;
+  }
+};
+
+const addIngressRules = async ({
+  securityGroupId,
+  accountId,
+  region,
+  permissions,
+}) => {
+  const ingressParams = {
+    GroupId: securityGroupId,
+    IpPermissions: permissions,
+  };
+
+  try {
+    const { accessKeyId, secretAccessKey, sessionToken } = await getCredentials(
+      accountId
+    );
+
+    const config = new AWS.Config({
+      accessKeyId,
+      secretAccessKey,
+      sessionToken,
+      region: region,
+    });
+
+    const ec2 = new AWS.EC2(config);
+
+    const data = await ec2
+      .authorizeSecurityGroupIngress(ingressParams)
+      .promise();
+    console.log(
+      'Ingress rules added:',
+      data.SecurityGroupRules.map((rule) => rule.SecurityGroupRuleId)
+    );
+  } catch (error) {
+    console.error('Error adding ingress rules:', error);
+    throw error;
+  }
+};
+
+const createSecurityGroup = async ({ accountId, region, params }) => {
+  try {
+    const { accessKeyId, secretAccessKey, sessionToken } = await getCredentials(
+      accountId
+    );
+
+    const config = new AWS.Config({
+      accessKeyId,
+      secretAccessKey,
+      sessionToken,
+      region: region,
+    });
+
+    const ec2 = new AWS.EC2(config);
+
+    const newSecurityGroup = await ec2.createSecurityGroup(params).promise();
+    console.log('Security group created:', newSecurityGroup.GroupId);
+
+    return newSecurityGroup;
+  } catch (error) {
+    console.error('Error creating security group:', error);
+    throw error;
+  }
+};
+
+const getSecurityGroupId = async ({ region, accountId }) => {
+  try {
+    const { accessKeyId, secretAccessKey, sessionToken } = await getCredentials(
+      accountId
+    );
+
+    const config = new AWS.Config({
+      accessKeyId,
+      secretAccessKey,
+      sessionToken,
+      region: region,
+    });
+
+    const ec2 = new AWS.EC2(config);
+
+    // Check if the security group already exists
+    const describeParams = {
+      Filters: [{ Name: 'group-name', Values: [SG_NAME] }],
+    };
+
+    const existingSecurityGroups = await ec2
+      .describeSecurityGroups(describeParams)
+      .promise();
+
+    if (existingSecurityGroups.SecurityGroups.length > 0) {
+      console.log(
+        'Security group already exists:',
+        existingSecurityGroups.SecurityGroups[0].GroupId
+      );
+      return existingSecurityGroups.SecurityGroups[0].GroupId;
+    } else {
+      // Create the security group if it doesn't exist
+      const createParams = {
+        Description: SG_DESCRIPTION,
+        GroupName: SG_NAME,
+      };
+      const newSecurityGroup = await createSecurityGroup({
+        accountId,
+        region,
+        params: createParams,
+      });
+
+      const securityGroupId = newSecurityGroup.GroupId;
+      console.log('Security group created:', securityGroupId);
+
+      await addIngressRules({
+        securityGroupId,
+        accountId,
+        region,
+        permissions: SG_IP_PERMISSIONS,
+      });
+
+      return securityGroupId;
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+};
+
 const launchEc2Instance = async ({
   name,
   region,
@@ -168,6 +364,11 @@ const launchEc2Instance = async ({
       accountId
     );
     const imageId = await getImageId({ region, accountId });
+    const securityGroupId = await getSecurityGroupId({
+      region,
+      accountId,
+    });
+
     const paramsInstance = {
       ImageId: imageId,
       InstanceType: type,
@@ -189,6 +390,9 @@ const launchEc2Instance = async ({
 
         { Key: 'ipAllocationId', Value: elasticIpAllocationId },
       ]),
+      UserData: userDataBase64,
+      KeyName: KEY_PAIR_NAME,
+      SecurityGroupIds: [securityGroupId],
     };
 
     if (option === 'Spot') {
@@ -321,11 +525,11 @@ const getInstance = async ({ accountId, region, instanceId }) => {
 
     const ec2 = new AWS.EC2(config);
     const instanceResponse = await ec2.describeInstances(params).promise();
-    console.log(JSON.stringify(instanceResponse));
+    // console.log(JSON.stringify(instanceResponse));
 
     if (instanceResponse.Reservations.length > 0) {
       let instance = instanceResponse.Reservations[0].Instances[0];
-      console.log(JSON.stringify(instance));
+      // console.log(JSON.stringify(instance));
 
       if (instance.State.Name === 'terminated') {
         return new ErrorResponse(

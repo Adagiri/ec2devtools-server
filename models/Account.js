@@ -7,6 +7,12 @@ const AccountSchema = new mongoose.Schema({
     required: true,
   },
 
+  awsRole: {
+    type: mongoose.Types.ObjectId,
+    ref: 'AwsRole',
+    required: true,
+  },
+
   activeServerRegions: {
     type: [String],
   },

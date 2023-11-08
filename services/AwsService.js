@@ -3,6 +3,7 @@ const Account = require('../models/Account');
 const TemporaryCredential = require('../models/TemporaryCredential');
 const { generateRandomString, decrypt, encrypt } = require('../utils/general');
 const { ErrorResponse } = require('../utils/responses');
+const AwsRole = require('../models/AwsRole');
 
 const DEFAULT_REGION = 'us-east-1';
 const credentials = {
@@ -142,7 +143,6 @@ const getRegions = async (accountId) => {
     };
 
     const data = await ec2.describeRegions(params).promise();
-    console.log(data, 'data');
     const regions = data.Regions.map((region) => ({
       name: region.RegionName,
       location:
@@ -153,6 +153,144 @@ const getRegions = async (accountId) => {
   } catch (error) {
     console.log(error, 'Error occured whilst retrieving regions');
     console.log(error.code);
+    throw error;
+  }
+};
+
+const whitelistRole = async (newTrustedEntity) => {
+  try {
+    const iam = new AWS.IAM({ region: DEFAULT_REGION });
+
+    const roleBelow50Entities = await AwsRole.findOne({
+      trustedEntityCount: { $lt: 50 },
+    });
+
+    if (roleBelow50Entities) {
+      // Add the role
+      const roleName = roleBelow50Entities.name;
+      const data = await iam.getRole({ RoleName: roleName }).promise();
+      const role = data.Role;
+
+      const encodedPolicy = role.AssumeRolePolicyDocument;
+      const decodedPolicy = decodeURIComponent(encodedPolicy);
+      const policy = JSON.parse(decodedPolicy);
+
+      const Principal = policy.Statement[0].Principal.AWS;
+
+      if (typeof Principal === 'string') {
+        policy.Statement[0].Principal.AWS = [Principal, newTrustedEntity];
+      } else {
+        policy.Statement[0].Principal.AWS.push(newTrustedEntity);
+      }
+
+      await iam
+        .updateAssumeRolePolicy({
+          RoleName: roleName,
+          PolicyDocument: JSON.stringify(policy),
+        })
+        .promise();
+
+      // Increase entity count
+      roleBelow50Entities.trustedEntityCount++;
+      await roleBelow50Entities.save();
+
+      return {
+        awsRole: roleBelow50Entities._id,
+      };
+    } else {
+      // Create a new role
+      const roleName = `ec2devtools-${generateRandomString(10)}`;
+
+      const assumeRolePolicy = {
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Principal: {
+              AWS: [newTrustedEntity],
+            },
+            Action: 'sts:AssumeRole',
+            Condition: {},
+          },
+        ],
+      };
+
+      const params = {
+        RoleName: roleName,
+        AssumeRolePolicyDocument: JSON.stringify(assumeRolePolicy),
+      };
+
+      const data = await iam.createRole(params).promise();
+      const arn = data.Role.Arn;
+
+      const newRole = new AwsRole({
+        name: roleName,
+        arn: arn,
+        trustedEntityCount: 1,
+      });
+
+      await newRole.save();
+      return {
+        awsRole: newRole._id,
+      };
+    }
+  } catch (error) {
+    console.log(
+      error,
+      'Error occured whilst creating handling role trust policy for account creation'
+    );
+
+    if (error.code === 'MalformedPolicyDocument') {
+      throw 'Invalid role ARN provided';
+    }
+
+    throw error;
+  }
+};
+
+const blacklistRole = async ({ awsRoleId, trustedEntity }) => {
+  try {
+    const iam = new AWS.IAM({ region: DEFAULT_REGION });
+
+    const awsRole = await AwsRole.findById(awsRoleId);
+    const roleName = awsRole.name;
+
+    const data = await iam.getRole({ RoleName: roleName }).promise();
+    const role = data.Role;
+
+    const encodedPolicy = role.AssumeRolePolicyDocument;
+    const decodedPolicy = decodeURIComponent(encodedPolicy);
+    const policy = JSON.parse(decodedPolicy);
+
+    const Principal = policy.Statement[0].Principal.AWS;
+
+    if (typeof Principal === 'string') {
+      // Being string indicates that the role has only 1 trusted entity
+      policy.Statement[0].Principal.AWS = [
+        'arn:aws:iam::636032159314:user/EC2DevTools', // Replace with a default entity
+      ];
+    } else {
+      policy.Statement[0].Principal.AWS = Principal.filter(
+        (item) => item !== trustedEntity
+      );
+    }
+
+    await iam
+      .updateAssumeRolePolicy({
+        RoleName: roleName,
+        PolicyDocument: JSON.stringify(policy),
+      })
+      .promise();
+
+    // Increase entity count
+    awsRole.trustedEntityCount--;
+    await awsRole.save();
+  } catch (error) {
+    console.log(
+      error,
+      'Error occured whilst deleting trust policy during account deletion'
+    );
+
     throw error;
   }
 };
@@ -170,4 +308,10 @@ const sendEmail = async (params) => {
   }
 };
 
-module.exports = { getRegions, sendEmail, getCredentials };
+module.exports = {
+  getRegions,
+  sendEmail,
+  getCredentials,
+  whitelistRole,
+  blacklistRole,
+};
