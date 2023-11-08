@@ -51,9 +51,14 @@ module.exports.getServers = asyncHandler(async (_, args, context) => {
   const activeAccount = context.user.activeAccount;
   if (!activeAccount) {
     return [];
-  }
+  } else {
+    const accountId = activeAccount._id;
+    const regions = activeAccount.activeServerRegions;
 
-  return servers;
+    const servers = await getInstancesInAllRegions({ accountId, regions });
+
+    return servers;
+  }
 });
 
 module.exports.createServer = asyncHandler(async (_, args, context) => {
