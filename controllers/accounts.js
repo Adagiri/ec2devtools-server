@@ -77,7 +77,7 @@ module.exports.addAccount = asyncHandler(async (_, args, context) => {
       `The provided role ARN, ${args.roleArn}, already exists. Please create a different role to obtain a new unique role ARN and try again.`
     );
   }
-
+  console.log(args.roleArn);
   const resp = await AwsService.whitelistRole(args.roleArn);
 
   args.awsRole = resp.awsRole;

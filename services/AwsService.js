@@ -291,6 +291,10 @@ const blacklistRole = async ({ awsRoleId, trustedEntity }) => {
       'Error occured whilst deleting trust policy during account deletion'
     );
 
+    if (error.code === 'MalformedPolicyDocument') {
+      throw 'Invalid role ARN';
+    }
+
     throw error;
   }
 };
